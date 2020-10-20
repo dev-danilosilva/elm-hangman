@@ -79,7 +79,10 @@ update msg model =
             case model of
                 Success state ->
                     ( Success
-                        { state | pastGuesses = Set.insert guess state.pastGuesses}, Cmd.none
+                        { state
+                            | pastGuesses = Set.insert guess state.pastGuesses
+                            , attempts = state.attempts + 1
+                        }, Cmd.none
                     )
                 _ -> (Failure, Cmd.none)
 
@@ -87,7 +90,7 @@ update msg model =
             case response of
                 Ok word -> (Success
                                 { pastGuesses = Set.empty
-                                , word = word
+                                , word = word |> String.toUpper
                                 , attempts = 0
                                 , maxTries = 10}, Cmd.none)
 

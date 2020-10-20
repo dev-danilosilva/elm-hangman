@@ -10711,7 +10711,7 @@ var $elm$core$Basics$never = function (_v0) {
 	}
 };
 var $elm$browser$Browser$element = _Browser_element;
-var $author$project$Main$Defeat = {$: 'Defeat'};
+var $author$project$Main$Loading = {$: 'Loading'};
 var $author$project$Main$NewWord = function (a) {
 	return {$: 'NewWord', a: a};
 };
@@ -10970,7 +10970,7 @@ var $author$project$Main$requestWord = $elm$http$Http$get(
 		expect: A2($elm$http$Http$expectJson, $author$project$Main$NewWord, $author$project$Main$wordDecoder),
 		url: $author$project$Main$wordEndpoint
 	});
-var $author$project$Main$init = _Utils_Tuple2($author$project$Main$Defeat, $author$project$Main$requestWord);
+var $author$project$Main$init = _Utils_Tuple2($author$project$Main$Loading, $author$project$Main$requestWord);
 var $elm$core$Platform$Sub$batch = _Platform_batch;
 var $elm$core$Platform$Sub$none = $elm$core$Platform$Sub$batch(_List_Nil);
 var $author$project$Main$Failure = {$: 'Failure'};
@@ -10987,6 +10987,7 @@ var $elm$core$Set$insert = F2(
 		return $elm$core$Set$Set_elm_builtin(
 			A3($elm$core$Dict$insert, key, _Utils_Tuple0, dict));
 	});
+var $elm$core$String$toUpper = _String_toUpper;
 var $author$project$Main$update = F2(
 	function (msg, model) {
 		switch (msg.$) {
@@ -10999,11 +11000,12 @@ var $author$project$Main$update = F2(
 							_Utils_update(
 								state,
 								{
+									attempts: state.attempts + 1,
 									pastGuesses: A2($elm$core$Set$insert, guess, state.pastGuesses)
 								})),
 						$elm$core$Platform$Cmd$none);
 				} else {
-					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+					return _Utils_Tuple2($author$project$Main$Failure, $elm$core$Platform$Cmd$none);
 				}
 			case 'NewWord':
 				var response = msg.a;
@@ -11011,7 +11013,12 @@ var $author$project$Main$update = F2(
 					var word = response.a;
 					return _Utils_Tuple2(
 						$author$project$Main$Success(
-							{attempts: 0, maxTries: 10, pastGuesses: $elm$core$Set$empty, word: word}),
+							{
+								attempts: 0,
+								maxTries: 10,
+								pastGuesses: $elm$core$Set$empty,
+								word: $elm$core$String$toUpper(word)
+							}),
 						$elm$core$Platform$Cmd$none);
 				} else {
 					var err = response.a;
@@ -11058,7 +11065,6 @@ var $elm$core$Set$member = F2(
 		var dict = _v0.a;
 		return A2($elm$core$Dict$member, key, dict);
 	});
-var $elm$core$String$toUpper = _String_toUpper;
 var $author$project$Main$view = function (model) {
 	var resetButton = function (buttonLabel) {
 		return A2(
