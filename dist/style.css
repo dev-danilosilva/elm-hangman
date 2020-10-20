@@ -61,3 +61,18 @@
     font-size: 30px;
     cursor: pointer;
 }
+
+.reset-button:hover{
+    background-color: red;
+    color: white;
+}
+
+.loading-page, .error-page, .victory-page, .defeat-page{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    height: 100vh;
+    width: 100vw;
+    font-size: 70px;
+}

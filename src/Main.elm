@@ -1,12 +1,20 @@
 module Main exposing (..)
-import Html exposing (h1, div, text, span, Html)
+import Html exposing (Html, div, h1, h3, span, text)
 import Browser
 import Html.Attributes exposing (class)
 import Html exposing (button)
 import Html.Events exposing (onClick)
 import Set exposing (Set)
-import Task exposing (attempt)
+import Http
+import Json.Decode as Decode
+import Json.Decode exposing (Decoder)
 
+--{ pastGuesses = Set.empty
+--      , phrase = String.toUpper ""
+--      , attempts = 0
+--      , maxTries = 10
+--      , requestState = Loading
+--    }
 
 main : Program () Model Msg
 main =
@@ -18,10 +26,16 @@ main =
         }
 
 
-type alias Model = 
-    { lastGuess : String
-    , pastGuesses : Set String
-    , phrase : String
+type Model
+    = Failure
+    | Loading
+    | Success State
+    | Victory
+    | Defeat
+
+type alias State =
+    { pastGuesses : Set String
+    , word : String
     , attempts : Int
     , maxTries : Int
     }
@@ -30,30 +44,81 @@ type alias Model =
 type Msg
     = NewGuess String
     | Reset
+    | NewWord (Result Http.Error String)
+    | PlayerWins
+    | PlayerDefeated
+
+wordEndpoint : String
+wordEndpoint =
+    "http://127.0.0.1:5000/api/word"
+
+
+wordDecoder : Decoder String
+wordDecoder =
+    Decode.field "word" Decode.string
+
+requestWord : Cmd Msg
+requestWord =
+    Http.get
+        { url = wordEndpoint
+        , expect = Http.expectJson NewWord  wordDecoder
+        }
+
+checkVictory : State -> Model
+checkVictory state =
+    let
+        wonTheGame = False
+        lostTheGame =
+            if and (state.attempts > state.maxTries) wonTheGame then
+                True
+            else
+                False
+
+    in
+        if lostTheGame == True then
+            Defeat
+        else if wonTheGame == True then
+            Victory
+        else
+            Success state
 
 
 
 init : (Model, Cmd Msg)
-init = 
-    ( { lastGuess  = ""
-      , pastGuesses = Set.empty
-      , phrase = String.toUpper "paralelepipedo"
-      , attempts = 0
-      , maxTries = 10
-    } , Cmd.none )
+init =
+    ( Loading , requestWord )
 
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
     case msg of
         NewGuess guess ->
-            ({ model 
-                | lastGuess = guess
-                , pastGuesses = Set.insert guess model.pastGuesses
-                
-                }, Cmd.none)
+            case model of
+                Success state ->
+                    ( Success
+                        { state | pastGuesses = Set.insert guess state.pastGuesses}, Cmd.none
+                    )
+                _ -> (Failure, Cmd.none)
+
+        NewWord response ->
+            case response of
+                Ok word -> (Success
+                                { pastGuesses = Set.empty
+                                , word = word
+                                , attempts = 0
+                                , maxTries = 10}, Cmd.none)
+
+                Err err -> (Failure, Cmd.none)
+
         Reset ->
             init
+
+        PlayerWins ->
+            (model, Cmd.none)
+
+        PlayerDefeated ->
+            (model, Cmd.none)
+
 
 
 view : Model -> Html Msg
@@ -61,23 +126,23 @@ view model =
     let
         asList =
             String.split ""
-        
+
         asSet str =
             str
              |> asList
              |> Set.fromList
-            
 
-        phraseElement =
-            model.phrase
+
+        wordElement state =
+            state.word
                 |> asList
                 |> List.map (\char ->
                     case char of
 
                     " " -> " "
 
-                    _   -> 
-                        if Set.member char model.pastGuesses then
+                    _   ->
+                        if Set.member char state.pastGuesses then
                             char
                         else
                             "_"
@@ -95,25 +160,50 @@ view model =
                     button [ NewGuess char |> onClick ] [text char]
                     )
                 |> div [class "keyboard"]
-        
-        attemptsElement =
-            model.pastGuesses
+
+        attemptsElement state =
+            state.pastGuesses
                 |> Set.toList
                 |> List.filter
-                    (\char -> not <| Set.member char (model.phrase |> asSet))
-                |> List.map 
+                    (\char -> not <| Set.member char (state.word |> asSet))
+                |> List.map
                     (\attempt ->
                         span [class "past-attempt"] [text attempt]
                     )
                 |> div [class "past-attempts"]
 
-        resetButton =
-            div [class "reset-button", onClick Reset] [text "Reset"]
+        resetButton buttonLabel =
+            div [class "reset-button", onClick Reset] [text buttonLabel]
 
     in
-        div []
-            [ phraseElement
-            , attemptsElement
-            , keyboardElement
-            , resetButton
-            ]
+        case model of
+            Loading ->
+                div [class "loading-page"]
+                    [ h3 [] [text "Loading..."]
+                    ]
+            Failure ->
+                div [ class "error-page"]
+                    [ h3 [] [text "Error"]
+                    , resetButton "Reload"
+                    ]
+            Success state ->
+                div []
+                    [ wordElement state
+                    , attemptsElement state
+                    , keyboardElement
+                    , resetButton "Reset"
+                    ]
+
+            Victory ->
+                div [class "victory-page"]
+                    [ h3 [] [text "You Win!!"]
+                    , resetButton "New"
+                    ]
+
+
+            Defeat ->
+                div [class "defeat-page"]
+                    [ h3 [] [text "You Lose!!"]
+                    , resetButton "New"
+                    ]
+
