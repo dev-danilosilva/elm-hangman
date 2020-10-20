@@ -1,4 +1,5 @@
 module Main exposing (..)
+import Bitwise
 import Html exposing (Html, div, h1, h3, span, text)
 import Browser
 import Html.Attributes exposing (class)
@@ -63,24 +64,6 @@ requestWord =
         { url = wordEndpoint
         , expect = Http.expectJson NewWord  wordDecoder
         }
-
-checkVictory : State -> Model
-checkVictory state =
-    let
-        wonTheGame = False
-        lostTheGame =
-            if and (state.attempts > state.maxTries) wonTheGame then
-                True
-            else
-                False
-
-    in
-        if lostTheGame == True then
-            Defeat
-        else if wonTheGame == True then
-            Victory
-        else
-            Success state
 
 
 
