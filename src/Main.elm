@@ -1,9 +1,8 @@
 module Main exposing (..)
-import Bitwise
-import Html exposing (Html, div, h1, h3, h4, span, text)
+
 import Browser
+import Html exposing (Html, div, h3, span, text, button)
 import Html.Attributes exposing (class)
-import Html exposing (button)
 import Html.Events exposing (onClick)
 import Set exposing (Set)
 import Http
@@ -99,7 +98,7 @@ update msg model =
                                 )
                                 |> (\(res, newState) ->
                                         if res == True then
-                                            Victory state
+                                            Victory newState
                                         else
                                             Success newState)
                     in
