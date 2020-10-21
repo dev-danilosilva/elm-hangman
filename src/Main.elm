@@ -1,6 +1,6 @@
 module Main exposing (..)
 import Bitwise
-import Html exposing (Html, div, h1, h3, span, text)
+import Html exposing (Html, div, h1, h3, h4, span, text)
 import Browser
 import Html.Attributes exposing (class)
 import Html exposing (button)
@@ -10,12 +10,6 @@ import Http
 import Json.Decode as Decode
 import Json.Decode exposing (Decoder)
 
---{ pastGuesses = Set.empty
---      , phrase = String.toUpper ""
---      , attempts = 0
---      , maxTries = 10
---      , requestState = Loading
---    }
 
 main : Program () Model Msg
 main =
@@ -26,19 +20,28 @@ main =
         , subscriptions = \_ -> Sub.none
         }
 
+and : Bool -> Bool -> Bool
+and a b =
+    case a of
+        True ->
+            if b == True then
+                True
+            else
+                False
+        False -> False
 
 type Model
     = Failure
     | Loading
     | Success State
-    | Victory
-    | Defeat
+    | Victory State
+    | Defeat State
 
 type alias State =
     { pastGuesses : Set String
     , word : String
     , attempts : Int
-    , maxTries : Int
+    , maxErrors : Int
     }
 
 
@@ -46,8 +49,6 @@ type Msg
     = NewGuess String
     | Reset
     | NewWord (Result Http.Error String)
-    | PlayerWins
-    | PlayerDefeated
 
 wordEndpoint : String
 wordEndpoint =
@@ -78,12 +79,31 @@ update msg model =
         NewGuess guess ->
             case model of
                 Success state ->
-                    ( Success
-                        { state
-                            | pastGuesses = Set.insert guess state.pastGuesses
-                            , attempts = state.attempts + 1
-                        }, Cmd.none
-                    )
+                    let
+                        wordGuessIntersect =
+                            state.word
+                                |> String.split ""
+                                |> Set.fromList
+                                |> (\solutionSet ->
+                                    let
+                                        newState = { state
+                                                     | pastGuesses = Set.insert guess state.pastGuesses
+                                                     , attempts = state.attempts + 1
+                                                 }
+                                        intersect = Debug.log "Intersect: " (Set.intersect solutionSet newState.pastGuesses)
+                                        intersectSize = Set.size intersect
+                                        solutionSize = Set.size solutionSet
+                                        minIntersectSize = Debug.log "Solution Size" solutionSize  == Debug.log "Intersect Size" intersectSize
+                                    in
+                                        (minIntersectSize, newState)
+                                )
+                                |> (\(res, newState) ->
+                                        if res == True then
+                                            Victory state
+                                        else
+                                            Success newState)
+                    in
+                        (wordGuessIntersect, Cmd.none)
                 _ -> (Failure, Cmd.none)
 
         NewWord response ->
@@ -92,18 +112,13 @@ update msg model =
                                 { pastGuesses = Set.empty
                                 , word = word |> String.toUpper
                                 , attempts = 0
-                                , maxTries = 10}, Cmd.none)
+                                , maxErrors = 10}, Cmd.none)
 
                 Err err -> (Failure, Cmd.none)
 
         Reset ->
             init
 
-        PlayerWins ->
-            (model, Cmd.none)
-
-        PlayerDefeated ->
-            (model, Cmd.none)
 
 
 
@@ -180,16 +195,16 @@ view model =
                     , resetButton "Reset"
                     ]
 
-            Victory ->
+            Victory state ->
                 div [class "victory-page"]
-                    [ h3 [] [text "You Win!!"]
+                    [ h3 [] [text "You Win!!", div [] [text <| (++) "Answer: " <| String.toLower state.word]]
                     , resetButton "New"
                     ]
 
 
-            Defeat ->
+            Defeat state ->
                 div [class "defeat-page"]
-                    [ h3 [] [text "You Lose!!"]
+                    [ h3 [] [text "You Lose!!", div [] [text <| (++) "Answer: " <| String.toLower state.word]]
                     , resetButton "New"
                     ]
 

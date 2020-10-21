@@ -10977,6 +10977,9 @@ var $author$project$Main$Failure = {$: 'Failure'};
 var $author$project$Main$Success = function (a) {
 	return {$: 'Success', a: a};
 };
+var $author$project$Main$Victory = function (a) {
+	return {$: 'Victory', a: a};
+};
 var $elm$core$Set$Set_elm_builtin = function (a) {
 	return {$: 'Set_elm_builtin', a: a};
 };
@@ -10987,6 +10990,51 @@ var $elm$core$Set$insert = F2(
 		return $elm$core$Set$Set_elm_builtin(
 			A3($elm$core$Dict$insert, key, _Utils_Tuple0, dict));
 	});
+var $elm$core$Set$fromList = function (list) {
+	return A3($elm$core$List$foldl, $elm$core$Set$insert, $elm$core$Set$empty, list);
+};
+var $elm$core$Dict$filter = F2(
+	function (isGood, dict) {
+		return A3(
+			$elm$core$Dict$foldl,
+			F3(
+				function (k, v, d) {
+					return A2(isGood, k, v) ? A3($elm$core$Dict$insert, k, v, d) : d;
+				}),
+			$elm$core$Dict$empty,
+			dict);
+	});
+var $elm$core$Dict$member = F2(
+	function (key, dict) {
+		var _v0 = A2($elm$core$Dict$get, key, dict);
+		if (_v0.$ === 'Just') {
+			return true;
+		} else {
+			return false;
+		}
+	});
+var $elm$core$Dict$intersect = F2(
+	function (t1, t2) {
+		return A2(
+			$elm$core$Dict$filter,
+			F2(
+				function (k, _v0) {
+					return A2($elm$core$Dict$member, k, t2);
+				}),
+			t1);
+	});
+var $elm$core$Set$intersect = F2(
+	function (_v0, _v1) {
+		var dict1 = _v0.a;
+		var dict2 = _v1.a;
+		return $elm$core$Set$Set_elm_builtin(
+			A2($elm$core$Dict$intersect, dict1, dict2));
+	});
+var $elm$core$Debug$log = _Debug_log;
+var $elm$core$Set$size = function (_v0) {
+	var dict = _v0.a;
+	return $elm$core$Dict$size(dict);
+};
 var $elm$core$String$toUpper = _String_toUpper;
 var $author$project$Main$update = F2(
 	function (msg, model) {
@@ -10995,15 +11043,32 @@ var $author$project$Main$update = F2(
 				var guess = msg.a;
 				if (model.$ === 'Success') {
 					var state = model.a;
-					return _Utils_Tuple2(
-						$author$project$Main$Success(
-							_Utils_update(
+					var wordGuessIntersect = function (_v2) {
+						var res = _v2.a;
+						var newState = _v2.b;
+						return res ? $author$project$Main$Victory(state) : $author$project$Main$Success(newState);
+					}(
+						function (solutionSet) {
+							var solutionSize = $elm$core$Set$size(solutionSet);
+							var newState = _Utils_update(
 								state,
 								{
 									attempts: state.attempts + 1,
 									pastGuesses: A2($elm$core$Set$insert, guess, state.pastGuesses)
-								})),
-						$elm$core$Platform$Cmd$none);
+								});
+							var intersect = A2(
+								$elm$core$Debug$log,
+								'Intersect: ',
+								A2($elm$core$Set$intersect, solutionSet, newState.pastGuesses));
+							var intersectSize = $elm$core$Set$size(intersect);
+							var minIntersectSize = _Utils_eq(
+								A2($elm$core$Debug$log, 'Solution Size', solutionSize),
+								A2($elm$core$Debug$log, 'Intersect Size', intersectSize));
+							return _Utils_Tuple2(minIntersectSize, newState);
+						}(
+							$elm$core$Set$fromList(
+								A2($elm$core$String$split, '', state.word))));
+					return _Utils_Tuple2(wordGuessIntersect, $elm$core$Platform$Cmd$none);
 				} else {
 					return _Utils_Tuple2($author$project$Main$Failure, $elm$core$Platform$Cmd$none);
 				}
@@ -11015,7 +11080,7 @@ var $author$project$Main$update = F2(
 						$author$project$Main$Success(
 							{
 								attempts: 0,
-								maxTries: 10,
+								maxErrors: 10,
 								pastGuesses: $elm$core$Set$empty,
 								word: $elm$core$String$toUpper(word)
 							}),
@@ -11024,12 +11089,8 @@ var $author$project$Main$update = F2(
 					var err = response.a;
 					return _Utils_Tuple2($author$project$Main$Failure, $elm$core$Platform$Cmd$none);
 				}
-			case 'Reset':
-				return $author$project$Main$init;
-			case 'PlayerWins':
-				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 			default:
-				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				return $author$project$Main$init;
 		}
 	});
 var $author$project$Main$NewGuess = function (a) {
@@ -11047,24 +11108,13 @@ var $elm$core$List$filter = F2(
 			_List_Nil,
 			list);
 	});
-var $elm$core$Set$fromList = function (list) {
-	return A3($elm$core$List$foldl, $elm$core$Set$insert, $elm$core$Set$empty, list);
-};
 var $elm$html$Html$h3 = _VirtualDom_node('h3');
-var $elm$core$Dict$member = F2(
-	function (key, dict) {
-		var _v0 = A2($elm$core$Dict$get, key, dict);
-		if (_v0.$ === 'Just') {
-			return true;
-		} else {
-			return false;
-		}
-	});
 var $elm$core$Set$member = F2(
 	function (key, _v0) {
 		var dict = _v0.a;
 		return A2($elm$core$Dict$member, key, dict);
 	});
+var $elm$core$String$toLower = _String_toLower;
 var $author$project$Main$view = function (model) {
 	var resetButton = function (buttonLabel) {
 		return A2(
@@ -11218,6 +11268,7 @@ var $author$project$Main$view = function (model) {
 						resetButton('Reset')
 					]));
 		case 'Victory':
+			var state = model.a;
 			return A2(
 				$elm$html$Html$div,
 				_List_fromArray(
@@ -11231,11 +11282,20 @@ var $author$project$Main$view = function (model) {
 						_List_Nil,
 						_List_fromArray(
 							[
-								$elm$html$Html$text('You Win!!')
+								$elm$html$Html$text('You Win!!'),
+								A2(
+								$elm$html$Html$div,
+								_List_Nil,
+								_List_fromArray(
+									[
+										$elm$html$Html$text(
+										'Answer: ' + $elm$core$String$toLower(state.word))
+									]))
 							])),
 						resetButton('New')
 					]));
 		default:
+			var state = model.a;
 			return A2(
 				$elm$html$Html$div,
 				_List_fromArray(
@@ -11249,7 +11309,15 @@ var $author$project$Main$view = function (model) {
 						_List_Nil,
 						_List_fromArray(
 							[
-								$elm$html$Html$text('You Lose!!')
+								$elm$html$Html$text('You Lose!!'),
+								A2(
+								$elm$html$Html$div,
+								_List_Nil,
+								_List_fromArray(
+									[
+										$elm$html$Html$text(
+										'Answer: ' + $elm$core$String$toLower(state.word))
+									]))
 							])),
 						resetButton('New')
 					]));
@@ -11267,4 +11335,4 @@ var $author$project$Main$main = $elm$browser$Browser$element(
 		view: $author$project$Main$view
 	});
 _Platform_export({'Main':{'init':$author$project$Main$main(
-	$elm$json$Json$Decode$succeed(_Utils_Tuple0))({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{},"unions":{"Main.Msg":{"args":[],"tags":{"NewGuess":["String.String"],"Reset":[],"NewWord":["Result.Result Http.Error String.String"],"PlayerWins":[],"PlayerDefeated":[]}},"Http.Error":{"args":[],"tags":{"BadUrl":["String.String"],"Timeout":[],"NetworkError":[],"BadStatus":["Basics.Int"],"BadBody":["String.String"]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}},"Basics.Int":{"args":[],"tags":{"Int":[]}}}}})}});}(this));
+	$elm$json$Json$Decode$succeed(_Utils_Tuple0))({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{},"unions":{"Main.Msg":{"args":[],"tags":{"NewGuess":["String.String"],"Reset":[],"NewWord":["Result.Result Http.Error String.String"]}},"Http.Error":{"args":[],"tags":{"BadUrl":["String.String"],"Timeout":[],"NetworkError":[],"BadStatus":["Basics.Int"],"BadBody":["String.String"]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"String.String":{"args":[],"tags":{"String":[]}},"Basics.Int":{"args":[],"tags":{"Int":[]}}}}})}});}(this));
