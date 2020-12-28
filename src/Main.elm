@@ -51,7 +51,7 @@ type Msg
 
 wordEndpoint : String
 wordEndpoint =
-    "http://127.0.0.1:5000/api/word"
+    ""
 
 
 wordDecoder : Decoder String
@@ -69,7 +69,11 @@ requestWord =
 
 init : (Model, Cmd Msg)
 init =
-    ( Loading , requestWord )
+    (Success
+        { pastGuesses = Set.empty
+        , word = "Gratitude" |> String.toUpper
+        , attempts = 0
+        , maxErrors = 10}, Cmd.none)
 
 
 update : Msg -> Model -> (Model, Cmd Msg)
